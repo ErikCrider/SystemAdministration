@@ -3,6 +3,7 @@ Create a list of all servers with files in the RecycleBin older than X days. Set
 This script gets all servers in Active Directory with "Windows Server" in the OperatingSystem attribute and then if it can ping the server.
 If the server is pingable it will attempt to gat files older than the set time period and then output this to a file
 This output file can be paired with the modified powershell script Get-RecycleBinSizeXDays.ps1 that is in this repository
+Unreachable servers are kept in the variable "$BadServerList" if you need to review those.
 
 Author: Erik Crider
 Date:	11/03/2020
