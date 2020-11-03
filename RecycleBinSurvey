@@ -1,0 +1,55 @@
+<#
+Create a list of all servers with files in the RecycleBin older than X days. Set the variable "$DaysOld" to the desired date range
+This script gets all servers in Active Directory with "Windows Server" in the OperatingSystem attribute and then if it can ping the server.
+If the server is pingable it will attempt to gat files older than the set time period and then output this to a file
+This output file can be paired with the modified powershell script Get-RecycleBinSize.ps1 that is in this repository
+
+Author: Erik Crider
+Date:	11/03/2020
+
+#>
+
+
+$DaysOld = "-60"
+$date = (get-date -uformat "%m-%d-%Y-%R" | ForEach-Object { $_ -replace ":", "." }) 
+$Servers = "c:\temp\RecycleBin-" + $Date+'.txt' 
+Get-ADComputer -Filter {( OperatingSystem -Like '*Windows Server*') } | sort name | select -expandproperty name | Out-File $Servers
+
+
+##  Variables to be used to hold data in the script below
+$dataColl = @()
+$GoodServerList = @()
+$BadServerList = @()
+$ServerList = $servers
+
+##  Attempt to ping each server in the list, separate into two variables with only the pingable servers going forward
+foreach ($serverName in $Serverlist){
+If (test-connection -ComputerName $servername -Quiet -Count 1){
+$GoodServerList += $Servername
+} else {
+$BadServerList +=$servername}
+}
+
+
+foreach ($srv in $goodserverlist)
+{
+$drives = Get-WmiObject -Class Win32_LogicalDisk -Filter "DriveType = 3" -ComputerName $Srv
+foreach ($drive in $drives)
+{
+$path = "\\" + $srv + "\" + $drive.DeviceID.Replace(":","$") + '\$Recycle.Bin'
+$dirSize = Get-ChildItem $path -recurse -force |  Where-Object {($_.LastWriteTime -lt (Get-Date).AddDays($DaysOld))} | select Length |Measure-Object -Sum length
+$dirSize.sum = $dirSize.sum/1MB
+$finalResult = "{0:N2} MB" -f $dirSize.sum
+$Driveletter = $Drive.deviceID
+$dataObject = New-Object PSObject
+Add-Member -inputObject $dataObject -memberType NoteProperty -name "ServerName" -value $srv
+Add-Member -inputObject $dataObject -memberType NoteProperty -name "DriveLetter" -value $DriveLetter
+Add-Member -inputObject $dataObject -memberType NoteProperty -name "Dir_Size" -value $finalResult
+$dataColl += $dataObject 
+$dataObject
+}
+}
+
+
+$ExportResults = "c:\temp\RecycleBinResults-" + $Date+'.txt' 
+$dataColl | export-csv $ExportResults -notypeinformation
