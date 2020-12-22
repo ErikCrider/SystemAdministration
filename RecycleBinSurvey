@@ -27,8 +27,6 @@ $dataColl = @()
 $GoodServerList = @()
 $BadServerList = @()
 $ServerList = Get-content $servers
-##$GoodPathList = @()
-##$BadPathList = @()
 
 ##  Attempt to ping each server in the list, separate into two variables with only the pingable servers going forward
 write-host "Attempting to ping servers"
@@ -48,6 +46,7 @@ foreach ($drive in $drives)
 $path = "\\" + $srv + "\" + $drive.DeviceID.Replace(":","$") + '\$Recycle.Bin'
 if (test-path $path){
 $dirSize = Get-ChildItem $path -recurse -force -ErrorAction silentlycontinue |  Where-Object {($_.LastWriteTime -lt (Get-Date).AddDays($DaysOld))} | select Length |Measure-Object -Sum length  -ErrorAction silentlycontinue 
+if ($dirSize.sum){
 $dirSize.sum = $dirSize.sum/1MB
 $finalResult = "{0:N2}" -f $dirSize.sum
 $Driveletter = $Drive.deviceID
@@ -57,6 +56,10 @@ Add-Member -inputObject $dataObject -memberType NoteProperty -name "DriveLetter"
 Add-Member -inputObject $dataObject -memberType NoteProperty -name "Dir_Size_in_MB" -value $finalResult
 $dataColl += $dataObject 
 $dataObject
+} else {
+write-host "$path has no files older than $daysold days old"
+}
+
 }else{
 write-host "$path not found or not accessible"
 }
@@ -64,6 +67,7 @@ write-host "$path not found or not accessible"
 [int]$DevcurrentItem = [array]::indexof($Goodserverlist,$srv)
 Write-Progress -Activity "Getting Recycle Bins" -Status "Device $($DevcurrentItem) of $($Goodserverlist.Count - 1) - $([math]::round((($DevcurrentItem + 1)/$Goodserverlist.Count),2) * 100)%  - Currently checking - $($srv)" -PercentComplete $([float](($DevcurrentItem + 1)/$Goodserverlist.Count) * 100)
 }
+
 
 
 $ExportResults = "c:\temp\RecycleBinResults-" + $Date+'.txt' 
