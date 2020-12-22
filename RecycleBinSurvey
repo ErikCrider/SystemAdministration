@@ -8,12 +8,17 @@ Unreachable servers are kept in the variable "$BadServerList" if you need to rev
 Author: Erik Crider
 Date:	11/03/2020
 
+Update: 12/22/2020
+Added status updates within sections and progress bar to main portion of script
+Added error handling for most errors
 #>
 
-
 $DaysOld = "-60"
+
+##  Gather all servers, output to a file
 $date = (get-date -uformat "%m-%d-%Y-%R" | ForEach-Object { $_ -replace ":", "." }) 
 $Servers = "c:\temp\RecycleBin-" + $Date+'.txt' 
+write-host "Gathering list of servers from AD"
 Get-ADComputer -Filter {( OperatingSystem -Like '*Windows Server*') } | sort name | select -expandproperty name | Out-File $Servers
 
 
@@ -21,9 +26,12 @@ Get-ADComputer -Filter {( OperatingSystem -Like '*Windows Server*') } | sort nam
 $dataColl = @()
 $GoodServerList = @()
 $BadServerList = @()
-$ServerList = $servers
+$ServerList = Get-content $servers
+##$GoodPathList = @()
+##$BadPathList = @()
 
 ##  Attempt to ping each server in the list, separate into two variables with only the pingable servers going forward
+write-host "Attempting to ping servers"
 foreach ($serverName in $Serverlist){
 If (test-connection -ComputerName $servername -Quiet -Count 1){
 $GoodServerList += $Servername
@@ -34,21 +42,27 @@ $BadServerList +=$servername}
 
 foreach ($srv in $goodserverlist)
 {
-$drives = Get-WmiObject -Class Win32_LogicalDisk -Filter "DriveType = 3" -ComputerName $Srv
+$drives = Get-WmiObject -Class Win32_LogicalDisk -Filter "DriveType = 3" -ComputerName $Srv -ErrorAction silentlycontinue 
 foreach ($drive in $drives)
 {
 $path = "\\" + $srv + "\" + $drive.DeviceID.Replace(":","$") + '\$Recycle.Bin'
-$dirSize = Get-ChildItem $path -recurse -force |  Where-Object {($_.LastWriteTime -lt (Get-Date).AddDays($DaysOld))} | select Length |Measure-Object -Sum length
+if (test-path $path){
+$dirSize = Get-ChildItem $path -recurse -force -ErrorAction silentlycontinue |  Where-Object {($_.LastWriteTime -lt (Get-Date).AddDays($DaysOld))} | select Length |Measure-Object -Sum length  -ErrorAction silentlycontinue 
 $dirSize.sum = $dirSize.sum/1MB
-$finalResult = "{0:N2} MB" -f $dirSize.sum
+$finalResult = "{0:N2}" -f $dirSize.sum
 $Driveletter = $Drive.deviceID
 $dataObject = New-Object PSObject
 Add-Member -inputObject $dataObject -memberType NoteProperty -name "ServerName" -value $srv
 Add-Member -inputObject $dataObject -memberType NoteProperty -name "DriveLetter" -value $DriveLetter
-Add-Member -inputObject $dataObject -memberType NoteProperty -name "Dir_Size" -value $finalResult
+Add-Member -inputObject $dataObject -memberType NoteProperty -name "Dir_Size_in_MB" -value $finalResult
 $dataColl += $dataObject 
 $dataObject
+}else{
+write-host "$path not found or not accessible"
 }
+}
+[int]$DevcurrentItem = [array]::indexof($Goodserverlist,$srv)
+Write-Progress -Activity "Getting Recycle Bins" -Status "Device $($DevcurrentItem) of $($Goodserverlist.Count - 1) - $([math]::round((($DevcurrentItem + 1)/$Goodserverlist.Count),2) * 100)%  - Currently checking - $($srv)" -PercentComplete $([float](($DevcurrentItem + 1)/$Goodserverlist.Count) * 100)
 }
 
 
