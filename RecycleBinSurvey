@@ -2,7 +2,7 @@
 Create a list of all servers with files in the RecycleBin older than X days. Set the variable "$DaysOld" to the desired date range
 This script gets all servers in Active Directory with "Windows Server" in the OperatingSystem attribute and then if it can ping the server.
 If the server is pingable it will attempt to get files older than the set time period and then output this to a file
-This output file can be paired with the modified powershell script Get-RecycleBinSize60Days.ps1 that is in this repository
+This output file can be paired with the modified powershell script Get-RecycleBinSizeXDays.ps1 that is in this repository
 Unreachable servers are kept in the variable "$BadServerList" if you need to review those.
 
 Author: Erik Crider
@@ -83,7 +83,7 @@ $Uniques | sort servername | out-file $UniqueServers
 
 write-host "List of unique servers with files to be deleted in $UniqueServers"
 write-host "Use in next step with the following example code"
-write-host "Import-module c:\temp\Get-RecycleBinSize60Days.ps1"
+write-host "Import-module c:\temp\Get-RecycleBinSizeXDays.ps1"
 write-host "Foreach (`$Server in (get-content $uniqueservers)) {"
 write-host 'Get-RecycleBinSize60Days -ComputerName $Server -empty}'
 
