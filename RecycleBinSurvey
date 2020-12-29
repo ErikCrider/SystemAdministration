@@ -84,7 +84,7 @@ $Uniques | sort servername | export-csv $UniqueServers
 
 write-host "List of unique servers with files to be deleted in $UniqueServers"
 write-host "Use in next step with the following example code"
-write-host "Import-module c:\temp\Get-RecycleBinSize60Days.ps1"
+write-host "Import-module c:\temp\Get-RecycleBinSizeXDays.ps1"
 write-host "Foreach (`$Server in (get-content $uniqueservers)) {"
 write-host 'Get-RecycleBinSize60Days -ComputerName $Server -empty}'
 
