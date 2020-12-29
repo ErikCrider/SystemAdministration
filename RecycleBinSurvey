@@ -1,8 +1,8 @@
 <#
 Create a list of all servers with files in the RecycleBin older than X days. Set the variable "$DaysOld" to the desired date range
-This script gets all servers in Active Directory with "Windows Server" in the OperatingSystem attribute and then checks if it can ping the server.
+This script gets all servers in Active Directory with "Windows Server" in the OperatingSystem attribute and then if it can ping the server.
 If the server is pingable it will attempt to get files older than the set time period and then output this to a file
-This output file can be paired with the modified powershell script Get-RecycleBinSizeXDays.ps1 that is in this repository
+This output file can be paired with the modified powershell script Get-RecycleBinSize60Days.ps1 that is in this repository
 Unreachable servers are kept in the variable "$BadServerList" if you need to review those.
 
 Author: Erik Crider
@@ -20,7 +20,6 @@ $date = (get-date -uformat "%m-%d-%Y-%R" | ForEach-Object { $_ -replace ":", "."
 $Servers = "c:\temp\RecycleBin-" + $Date+'.txt' 
 write-host "Gathering list of servers from AD"
 Get-ADComputer -Filter {( OperatingSystem -Like '*Windows Server*') } | sort name | select -expandproperty name | Out-File $Servers
-
 
 
 ##  Variables to be used to hold data in the script below
@@ -77,14 +76,14 @@ write-host "Report of servers and Recyclebin sizes is in $ExportResults"
 
 
 $Dedup = Import-csv -Path $ExportResults
-$DedupGTzero = $dedup | where {$_.Dir_Size_in_MB -gt 0}
+$DedupGTzero = $dedup | where {[decimal]$_.Dir_Size_in_MB -gt 0}
 $Uniques = $DedupGTzero.servername | Get-Unique
 $UniqueServers = "c:\temp\RecycleBinServers-" + $Date+'.txt'
-$Uniques | sort servername | export-csv $UniqueServers
+$Uniques | sort servername | out-file $UniqueServers
 
 write-host "List of unique servers with files to be deleted in $UniqueServers"
 write-host "Use in next step with the following example code"
-write-host "Import-module c:\temp\Get-RecycleBinSizeXDays.ps1"
+write-host "Import-module c:\temp\Get-RecycleBinSize60Days.ps1"
 write-host "Foreach (`$Server in (get-content $uniqueservers)) {"
 write-host 'Get-RecycleBinSize60Days -ComputerName $Server -empty}'
 
