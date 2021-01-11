@@ -10,7 +10,6 @@ This script looks for all servers in Active Directory with the Active Directory 
 It then attempts to ping them and if pingable, verifies the path is accessible
 If files are found older than X days (configurable in script below) it will output these to a file.
 You can then run the last lines of the script (currently commented out) to delete these files.
-Command is also output to screen and can be copy pasted after script runs to delete the files that were found
 This must be run with an account that has access to the servers
 Open Powershell as your elevated credentials and then opened with RunAs using the command below
 Start-process Powershell.exe -verb RunAs
@@ -55,8 +54,12 @@ if (test-path "\\$server\c$\windows\ccmcache") {
 $GoodPathList += $Server
 $path = "\\$Server\c$\windows\ccmcache"
 $dirSize = Get-ChildItem $path -recurse -force | Where-Object {($_.LastWriteTime -lt (Get-Date).AddDays($DaysOld))} | select Length |Measure-Object -Sum length
+If ($dirsize -ne $Null){
 $dirSize.sum = $dirSize.sum/1MB
 $finalResult = "{0:N2}" -f $dirSize.sum
+} else {
+write-host "No files older than $daysold days old on $Server"
+}
 $dataObject = New-Object PSObject
 Add-Member -inputObject $dataObject -memberType NoteProperty -name "ServerName" -value $server
 Add-Member -inputObject $dataObject -memberType NoteProperty -name "Dir_Size_MB" -value $finalResult
