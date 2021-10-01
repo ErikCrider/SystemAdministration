@@ -1,0 +1,48 @@
+<#
+Migrate files to Sharepoint
+
+This script moves files to a sharepoint site from local files or file servers.
+Script goes to the local files then to the Sharepoint site to see if these files already exist in that location
+If files already reside in SP, it will not copy them again. If no files are in SP it will copy all files.
+
+This creates a transcript on the desktop which is useful for recording any files that failed to transfer.
+
+Limitations: Currently this script does not deal with subfolders.
+
+Prerequisites:
+PNP.Powershell module
+    Find-module PNP.Powershell | install-module
+Edit permissions to Sharepoint site and at least read permissions on local files
+
+Author: Erik Crider
+Date: 09/30/2021
+#>
+
+
+Start-Transcript -Path c:\users\<Username>\Desktop\transcript-<uniquename>.txt
+
+##  The URL you connec tto is the particular site you are transferring files to
+Connect-PnPOnline -Url https://<tenant>.sharepoint.com/sites/<sitename> -Interactive
+ 
+$FileLocation = "\\FileLocation" # Change this Network Folder path 
+$SharePointFolderPath="<SharepointPath" # Change the Document Library and Folder path e.g. "Shared Documents/ExampleFolder"
+
+##  Get list of files to transfer
+$ItemstToXfer = Get-ChildItem $FileLocation | Where-object {$_.PSIsContainer -ne $True} | Sort-Object length
+
+##  Find files that are already in the Sharepoint folder
+$ExistingFiles = Find-PnpFile -folder $SharePointFolderPath -Match *
+
+##  Create delta so that only files not yet transferred are moved
+$DeltaNameOnly = $ExistingFiles.name
+$DeltaFilesToXfer = $ItemstToXfer | where {$_ -notin $DeltaNameOnly}
+
+
+##  Move only files that are not yet in Sharepoint folder
+ForEach ($File in $DeltaFilesToXfer) { 
+Add-PnPFile -Path $File.FullName -folder $SharePointFolderPath #Add File to SharePoint Document Library folder 
+[int]$CurrentItem = [array]::indexof($DeltaFilesToXfer,$File)
+Write-Progress -Activity "Transferring Files to Sharepoint" -Status "File $($CurrentItem) of $($DeltaFilesToXfer.Count - 1) - $([math]::round((($CurrentItem + 1)/$DeltaFilesToXfer.Count),2) * 100)%  - Currently moving - $($File.Name)" -PercentComplete $([float](($CurrentItem + 1)/$DeltaFilesToXfer.Count) * 100)
+} 
+
+Stop-Transcript
